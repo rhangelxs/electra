@@ -360,8 +360,8 @@ do { \
         rv = posix_spawn(&pd, tar, NULL, NULL, (char **)&(const char*[]){ tar, "-xpf", progname("tweaksupport.tar"), "-C", "/" BOOTSTRAP_PREFIX, NULL }, NULL);
         waitpid(pd, NULL, 0);
         
-//        rv = posix_spawn(&pd, tar, NULL, NULL, (char **)&(const char*[]){ tar, "-xpf", progname("anemoneapp.tar"), "-C", "/Applications", NULL }, NULL);
-//        waitpid(pd, NULL, 0);
+        rv = posix_spawn(&pd, tar, NULL, NULL, (char **)&(const char*[]){ tar, "-xpf", progname("anemoneapp.tar"), "-C", "/Applications", NULL }, NULL);
+        waitpid(pd, NULL, 0);
         
         rv = posix_spawn(&pd, tar, NULL, NULL, (char **)&(const char*[]){ tar, "-xpf", progname("safemode.tar"), "-C", "/Applications", NULL }, NULL);
         waitpid(pd, NULL, 0);
