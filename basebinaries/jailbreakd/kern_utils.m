@@ -95,24 +95,34 @@ void fixupsetuid(int pid){
     }
     struct stat file_st;
     if (lstat(pathbuf, &file_st) == -1){
+#ifdef JAILBREAKDDEBUG
         fprintf(stderr,"Unable to get stat for file %s\n", pathbuf);
+#endif
         return;
     }
     if (file_st.st_mode & S_ISUID){
         uid_t fileUID = file_st.st_uid;
+#ifdef JAILBREAKDDEBUG
         fprintf(stderr,"Fixing up setuid for file owned by %u\n", fileUID);
+#endif
         
         uint64_t proc = proc_find(pid, 3);
         if (proc != 0) {
             uint64_t ucred = rk64(proc + offsetof_p_ucred);
             
             uid_t cr_svuid = rk32(ucred + offsetof_ucred_cr_svuid);
+#ifdef JAILBREAKDDEBUG
             fprintf(stderr,"Original sv_uid: %u\n", cr_svuid);
+#endif
             wk32(ucred + offsetof_ucred_cr_svuid, fileUID);
+#ifdef JAILBREAKDDEBUG
             fprintf(stderr,"New sv_uid: %u\n", fileUID);
+#endif
         }
     } else {
+#ifdef JAILBREAKDDEBUG
         fprintf(stderr,"File %s is not setuid!\n", pathbuf);
+#endif
         return;
     }
 }
@@ -197,12 +207,13 @@ void set_csblob(uint64_t proc) {
 }
 
 const char* abs_path_exceptions[] = {
-  "/bootstrap",
   "/Library",
   // XXX there's some weird stuff about linking and special
   // handling for /private/var/mobile/* in sandbox
   "/private/var/mobile/Library",
   "/private/var/mnt",
+  "/private/var/db",
+  "/private/var/stash",
   NULL
 };
 
@@ -212,10 +223,11 @@ uint64_t get_exception_osarray(void) {
   if (cached == 0) {
     // XXX use abs_path_exceptions
     cached = OSUnserializeXML("<array>"
-    "<string>/bootstrap/</string>"
     "<string>/Library/</string>"
     "<string>/private/var/mobile/Library/</string>"
     "<string>/private/var/mnt/</string>"
+    "<string>/private/var/db/</string>"
+    "<string>/private/var/stash/</string>"
     "</array>");
   }
 
@@ -228,15 +240,21 @@ void set_sandbox_extensions(uint64_t proc) {
   uint64_t proc_ucred = rk64(proc+0x100);
   uint64_t sandbox = rk64(rk64(proc_ucred+0x78) + 8 + 8);
 
+#ifdef JAILBREAKDDEBUG
   fprintf(stderr,"proc = 0x%llx & proc_ucred = 0x%llx & sandbox = 0x%llx\n", proc, proc_ucred, sandbox);
-
+#endif
+    
   if (sandbox == 0) {
+#ifdef JAILBREAKDDEBUG
     fprintf(stderr,"no sandbox, skipping\n");
+#endif
     return;
   }
 
   if (has_file_extension(sandbox, abs_path_exceptions[0])) {
+#ifdef JAILBREAKDDEBUG
     fprintf(stderr,"already has '%s', skipping\n", abs_path_exceptions[0]);
+#endif
     return;
   }
 
@@ -250,7 +268,9 @@ void set_sandbox_extensions(uint64_t proc) {
     ++path;
   }
 
+#ifdef JAILBREAKDDEBUG
   fprintf(stderr,"last extension_create_file ext: 0x%llx\n", ext);
+#endif
 
   if (ext != 0) {
     extension_add(ext, sandbox, exc_key);
@@ -279,16 +299,18 @@ void set_amfi_entitlements(uint64_t proc) {
       rv = OSDictionary_SetItem(amfi_entitlements, exc_key, get_exception_osarray());
     } else if (present != get_exception_osarray()) {
         unsigned int itemCount = OSArray_ItemCount(present);
-        
+#ifdef JAILBREAKDDEBUG
         fprintf(stderr,"present != 0 (0x%llx)! item count: %d\n", present, itemCount);
-        
+#endif
         BOOL foundEntitlements = NO;
         
         uint64_t itemBuffer = OSArray_ItemBuffer(present);
         
         for (int i = 0; i < itemCount; i++){
             uint64_t item = rk64(itemBuffer + (i * sizeof(void *)));
+#ifdef JAILBREAKDDEBUG
             fprintf(stderr,"Item %d: 0x%llx\n", i, item);
+#endif
             char *entitlementString = OSString_CopyString(item);
             if (strcmp(entitlementString, "/bootstrap/") == 0){
                 foundEntitlements = YES;
@@ -304,7 +326,9 @@ void set_amfi_entitlements(uint64_t proc) {
             rv = 1;
         }
     } else {
+#ifdef JAILBREAKDDEBUG
       fprintf(stderr,"Not going to merge array with itself :P\n");
+#endif
       rv = 1;
     }
 
@@ -316,17 +340,21 @@ void set_amfi_entitlements(uint64_t proc) {
 int setcsflagsandplatformize(int pid){
   uint64_t proc = proc_find(pid, 3);
   if (proc != 0) {
+#ifdef JAILBREAKDDEBUG
     fprintf(stderr,"setcsflagsandplatformize start on PID %d\n", pid);
     char name[40] = {0};
     kread(proc+0x268, name, 20);
     fprintf(stderr,"PID %d name is %s\n", pid, name);
+#endif
       
     set_csflags(proc);
     set_tfplatform(proc);
     set_amfi_entitlements(proc);
     set_sandbox_extensions(proc);
     set_csblob(proc);
+#ifdef JAILBREAKDDEBUG
     fprintf(stderr,"setcsflagsandplatformize done on PID %d\n", pid);
+#endif
     return 0;
   }
   fprintf(stderr,"Unable to find PID %d to entitle!\n", pid);

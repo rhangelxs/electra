@@ -39,9 +39,9 @@ fflush(log_file); \
 #define DEBUGLOG(fmt, args...)
 #endif
 
-#define PSPAWN_PAYLOAD_DYLIB "/bootstrap/pspawn_payload.dylib"
-#define AMFID_PAYLOAD_DYLIB "/bootstrap/amfid_payload.dylib"
-#define SBINJECT_PAYLOAD_DYLIB "/usr/lib/SBInject.dylib"
+#define PSPAWN_PAYLOAD_DYLIB "/electra/pspawn_payload.dylib"
+#define AMFID_PAYLOAD_DYLIB "/electra/amfid_payload.dylib"
+#define SBINJECT_PAYLOAD_DYLIB "/usr/lib/TweakInject.dylib"
 
 // since this dylib should only be loaded into launchd and xpcproxy
 // it's safe to assume that we're in xpcproxy if getpid() != 1
@@ -54,7 +54,6 @@ int current_process = PROCESS_XPCPROXY;
 
 const char* xpcproxy_blacklist[] = {
     "com.apple.diagnosticd",  // syslog
-    "com.apple.ReportCrash",  // crash reporting
     "MTLCompilerService",     // ?_?
     "OTAPKIAssetTool",        // h_h
     "cfprefsd",               // o_o
